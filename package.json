@@ -1,0 +1,30 @@
+{
+  "name": "ride-flow",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000R\u0000i\u0000d\u0000e\u0000-\u0000F\u0000l\u0000o\u0000w\u0000\r\u0000 \u0000",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/29edu/Ride-Flow.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/29edu/Ride-Flow/issues"
+  },
+  "homepage": "https://github.com/29edu/Ride-Flow#readme",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "faker": "^6.6.6",
+    "ioredis": "^5.10.1",
+    "mongodb": "^7.2.0",
+    "mongoose": "^9.6.2",
+    "nodemon": "^3.1.14"
+  }
+}
