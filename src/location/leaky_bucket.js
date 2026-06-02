@@ -1,5 +1,4 @@
 
-
 // Get the request stored in the Redis
 import { client } from "../config/redis.js";
 
@@ -17,11 +16,11 @@ const isRequestDropped = async (driverId, newRequestCount, leakRate) => {
 
     const current_time = Date.now(); // Give the current time in milli seconds
 
-    const duration = current_time - last_checked;
+    let duration = current_time - last_checked;
     duration = duration/1000; // converting to seconds
     const processedRequest = duration * leakRate;
 
-    const leftRequestInBucket = bucket_size - processedRequest;
+    let leftRequestInBucket = bucket_size - processedRequest;
 
     leftRequestInBucket = (leftRequestInBucket  >=  0) ? leftRequestInBucket : 0;
     const totalRequest = leftRequestInBucket + newRequestCount;
@@ -38,7 +37,7 @@ const isRequestDropped = async (driverId, newRequestCount, leakRate) => {
     const newData = {
         bucket_size,
         capacity,
-        last_checked
+        lastChecked : current_time
     }
 
     await client.hset(`bucket:${driverId}`, newData);
