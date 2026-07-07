@@ -1,47 +1,64 @@
+// Leaky-bucket rate limiter, per driver, backed by Redis.
+//
+// Each driver gets a bucket that "leaks" at `leakRate` requests/second. Every
+// incoming location update tries to add a drop; if that would overflow the
+// bucket's capacity the update is dropped. This caps each driver at ~leakRate
+// sustained updates/sec while still absorbing short bursts up to `capacity`.
+//
+// The whole check runs as a single Redis Lua script: it's atomic (no race
+// between reading and writing the level) and it's one round-trip instead of
+// four, which is what keeps the location hot path fast under load.
 
-// Get the request stored in the Redis
-import { client } from "../config/redis.js";
+import { client } from '../config/redis.js';
 
-const isRequestDropped = async (driverId, newRequestCount, leakRate) => {
+const LEAKY_BUCKET_LUA = `
+local key      = KEYS[1]
+local now      = tonumber(ARGV[1])
+local leakRate = tonumber(ARGV[2])
+local capacity = tonumber(ARGV[3])
+local cost     = tonumber(ARGV[4])
+local ttl      = tonumber(ARGV[5])
 
-    const data = await client.hgetall(`bucket:${driverId}`);
+local data = redis.call('HMGET', key, 'level', 'lastChecked')
+local level = tonumber(data[1]) or 0
+local last  = tonumber(data[2]) or now
 
-    let bucket_size = data.bucket_size==null? 0 : data.bucket_size; // Giving default value to the bucket_size in case new driver came
-    let capacity = data.capacity==null ? 1000 : data.capacity;
-    let last_checked = data.lastChecked==null ? Date.now() : data.lastChecked;
+local elapsed = (now - last) / 1000.0
+level = math.max(0, level - elapsed * leakRate)
 
-    bucket_size = Number(bucket_size);
-    capacity = Number(capacity);
-    last_checked = Number(last_checked)
+local dropped = 0
+if level + cost > capacity then
+  dropped = 1
+else
+  level = level + cost
+end
 
-    const current_time = Date.now(); // Give the current time in milli seconds
+redis.call('HSET', key, 'level', level, 'lastChecked', now)
+redis.call('PEXPIRE', key, ttl)
+return dropped
+`;
 
-    let duration = current_time - last_checked;
-    duration = duration/1000; // converting to seconds
-    const processedRequest = duration * leakRate;
-
-    let leftRequestInBucket = bucket_size - processedRequest;
-
-    leftRequestInBucket = (leftRequestInBucket  >=  0) ? leftRequestInBucket : 0;
-    const totalRequest = leftRequestInBucket + newRequestCount;
-
-    const isDropped = (totalRequest > capacity ? true: false) 
-    if(isDropped) {
-        bucket_size = capacity;
-    } else {
-        bucket_size = totalRequest;
-    }
-    
-    last_checked = current_time;
-
-    const newData = {
-        bucket_size,
-        capacity,
-        lastChecked : current_time
-    }
-
-    await client.hset(`bucket:${driverId}`, newData);
-    return isDropped;
+// register as a custom command once (uses EVALSHA under the hood)
+if (!client.leakyBucket) {
+    client.defineCommand('leakyBucket', { numberOfKeys: 1, lua: LEAKY_BUCKET_LUA });
 }
 
-export {isRequestDropped}
+export async function isRequestDropped(
+    driverId,
+    cost = 1,
+    leakRate = 100, // drops drained per second
+    capacity = 100, // max drops the bucket can hold (burst allowance)
+) {
+    const dropped = await client.leakyBucket(
+        `bucket:${driverId}`,
+        Date.now(),
+        leakRate,
+        capacity,
+        cost,
+        60000, // ttl ms — quiet drivers' buckets expire
+    );
+    return dropped === 1;
+}
+
+// local data = redis.call('HMGET', key, 'level', 'lastChecked') This code returns about the driver, 
+// If the driver is new, data is null and level is 0 and last is now. 
