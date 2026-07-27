@@ -3,18 +3,13 @@ import express from 'express'
 import { signUp, login } from '../controller/auth.controller.js';
 import authMiddleware from '../middlewares/auth.middleware.js';
 
-const app = express();
 const router = express.Router();
 
-router.get('/signup',  signUp);
-router.get('/login', login);
+console.log("I am in Router")
+router.post('/signup',  signUp);
 
-router.get('/check', authMiddleware, (req, res) =>  {
 
-    try {
-        
-        
-    } catch (error) {
-        
-    }
-})
+router.post('/login', login);
+
+export default router
+
