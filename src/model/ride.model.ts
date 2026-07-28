@@ -1,9 +1,31 @@
 
 import mongoose from "mongoose";
-import User from "./user.model.js";
-import { Driver } from "./driver.model.js";
+import { Schema, Types } from "mongoose";
 
-const rideSchema = new mongoose.Schema({
+interface Coordinates {
+    x : Number,
+    y : Number
+}
+
+interface Someone {
+    name : String,
+    phoneNumber : String
+}
+
+interface IRide {
+    userId : Types.ObjectId,
+    driverId : Types.ObjectId,
+    pickupLocation : Coordinates,
+    dropoffLocation : Coordinates,
+    fare : Number,
+    pickupTime ?: Date,
+    dropoffTime ?: Date,
+    rider : "me" | "someone",
+    someone ?: Someone
+}
+
+
+const rideSchema = new mongoose.Schema <IRide>({
 
     userId : {
         type : Schema.Types.ObjectId,
@@ -15,18 +37,6 @@ const rideSchema = new mongoose.Schema({
         ref : "Driver"
     },
 
-    currentLocation : {
-        x : {
-            type : Number,
-            required : true
-        },
-
-        y : {
-            type : Number,
-            required : true
-        }
-    },
-
     pickupLocation : {
         x : {
             type : Number,
@@ -36,7 +46,7 @@ const rideSchema = new mongoose.Schema({
         y : {
             type : Number,
             required : true
-        }
+        },
     },
 
     dropoffLocation : {
@@ -57,6 +67,10 @@ const rideSchema = new mongoose.Schema({
     },
 
     pickupTime : {
+        type : Date
+    },
+
+    dropoffTime : {
         type : Date
     },
 
@@ -84,6 +98,6 @@ const rideSchema = new mongoose.Schema({
     timestamps : true
 })
 
-const Ride = new mongoose.model("Ride", rideSchema);
+const Ride = mongoose.model<IRide>("Ride", rideSchema);
 
 export default Ride;

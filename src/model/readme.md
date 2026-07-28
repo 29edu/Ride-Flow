@@ -1,34 +1,8 @@
-```mermaid
-erDiagram
-    USER {
-        ObjectId id PK
-        string name
-        string email
-        string passwordHash
-        string role
-    }
 
-    DRIVER_PROFILE {
-        ObjectId id PK
-        ObjectId userId FK
-        string licenseNumber
-        string vehicleNumber
-        string verificationStatus
-        string status
-        ObjectId activeRideId
-    }
+# Models
 
-    RIDE {
-        ObjectId id PK
-        ObjectId riderId FK
-        ObjectId driverId FK
-        object pickup
-        object dropoff
-        number quotedFare
-        string status
-    }
-
-    USER ||--o| DRIVER_PROFILE : "has when role is driver"
-    USER ||--o{ RIDE : "requests"
-    DRIVER_PROFILE ||--o{ RIDE : "serves"
-```
+    Database Schemas defines the structure
+    Model inside the schema allows to performs database operations
+    Models uses that schema to create, read, update and delete documents in mongoDB
+    
+    Models create classes and allows to peform different methods like .find(), findOne(), .create() etc
