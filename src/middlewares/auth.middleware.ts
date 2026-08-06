@@ -7,18 +7,19 @@ import type {
     NextFunction
 } from "express"
 
-const authMiddleware = (req : Request, res : Response, next : NextFunction) => {
+const verifyToken = (req : Request, res : Response, next : NextFunction) => {
 
-    const authorization = req.headers.authorization;
+    // const authHeader = req.headers.Authorization || req.headers.authorization;  Wrong in typescript
+    const authHeader = req.headers.authorization
 
-    if(!authorization) {
+    if(!authHeader || !authHeader.startsWith("Bearer")) {
         return res.status(403).json({
             success : false,
             message : "No Token provided"
         })
     }
 
-    const [scheme, token] = authorization.split(" ");
+    const [scheme, token] = authHeader.split(" ");
 
     if(scheme !== "Bearer" || !token) {
         return res.status(401).json({
@@ -27,7 +28,8 @@ const authMiddleware = (req : Request, res : Response, next : NextFunction) => {
         })
     }
 
-    const secretKey : string | undefined = process.env.SECRET_KEY;
+    // const secretKey : string | undefined = process.env.SECRET_KEY;
+    const secretKey : string | undefined = "secretKey";
 
     if(!secretKey) {
         throw new Error("Secret key is missing from .env")
@@ -40,7 +42,8 @@ const authMiddleware = (req : Request, res : Response, next : NextFunction) => {
             if(err) {
                 return res.status(401).json({
                     success : false,
-                    message : "Expired Token/Something went wrong"
+                    message : "Expired Token/Something went wrong",
+                    token : token
                 })
             }
 
@@ -64,4 +67,4 @@ const authMiddleware = (req : Request, res : Response, next : NextFunction) => {
     }
 } 
 
-export default authMiddleware;
+export default verifyToken;
