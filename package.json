@@ -1,10 +1,15 @@
 {
   "name": "ride-flow",
   "version": "1.0.0",
-  "description": "��#\u0000 \u0000R\u0000i\u0000d\u0000e\u0000-\u0000F\u0000l\u0000o\u0000w\u0000\r\u0000 \u0000",
-  "main": "index.js",
+  "description": "Ride-Flow: KD-tree + min-cost max-flow matching, Fenwick/Segment-tree surge pricing, and a Redis pub/sub location pipeline.",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.ts",
+    "dev": "nodemon src/server.ts",
+    "seed": "node scripts/seed.js",
+    "test": "node --test",
+    "sim:match": "node scripts/simulateMatching.js",
+    "sim:loc": "node scripts/simulateLocations.js"
   },
   "repository": {
     "type": "git",
@@ -19,13 +24,32 @@
   },
   "homepage": "https://github.com/29edu/Ride-Flow#readme",
   "dependencies": {
+    "@googlemaps/js-api-loader": "^2.1.1",
+    "@types/jsonwebtoken": "^9.0.10",
+    "bcrypt": "^6.0.0",
+    "bcrypt-ts": "^9.0.1",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "faker": "^6.6.6",
+    "express-session": "^1.19.0",
+    "h3-js": "^4.5.0",
+    "http-errors": "^2.0.1",
     "ioredis": "^5.10.1",
+    "jsonwebtoken": "^9.0.3",
+    "jwt-decode": "^4.0.0",
     "mongodb": "^7.2.0",
     "mongoose": "^9.6.2",
+    "morgan": "^1.11.0",
     "nodemon": "^3.1.14",
-    "socket.io": "^4.8.3"
+    "passport": "^0.7.0",
+    "redis": "^6.1.0",
+    "socket.io": "^4.8.3",
+    "uuid": "^14.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
   }
 }
