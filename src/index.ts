@@ -1,38 +1,32 @@
 
-import express , {type Express, type Request, type Response} from 'express'
+import express , {type Express, type NextFunction, type Request, type Response} from 'express'
 import connectDB from './config/db.ts';
+import { connectRedis } from './config/redis.ts';
 const app: Express = express();
+import initializeServer from './socket/index.ts';
+import { createServer } from 'node:http';
+import { Socket } from 'socket.io';
+import verifyToken from './middlewares/auth.middleware.ts';
 
 connectDB();
+// connectRedis();
 
-// Routing
+const httpServer = createServer(app);
+const io = initializeServer(httpServer); // I don't need to mention the type here, typescript will automatically infers io as socketIoServer
+// infer means typescript will automatically understand the type without mentioning it explicitly
+
 app.use(express.json()) // convert the incoming json into object
 
-
-async function init(): Promise<void> {
-    // Import the needed libraries.
-    await google.maps.importLibrary('maps');
-
-    // Access the map.
-    const mapElement = document.querySelector('gmp-map')!;
-    // Access the underlying map object.
-    const innerMap = mapElement.innerMap;
-
-    console.log({ mapElement, innerMap });
-}
-
-void init();
-
+// Routers
 import healthRouter from './routes/healthCheck.routes.ts'
 import authRoutes from './routes/auth.routes.ts'
+import userRoutes from './routes/user.routes.ts'
+
 app.use('/',healthRouter)
-app.use('/auth', authRoutes)
+app.use('/auth', authRoutes);
+app.use('/api/', userRoutes)
 
-app.get('/', (req : Request, res: Response) => {
-    res.send('hello world')
-});
-
-app.listen(5005, () => {
-    console.log(`Server is running at http://localhost:5005`);
+httpServer.listen(5009, () => {
+    console.log(`Server is running at http://localhost:5009`)
 })
 
