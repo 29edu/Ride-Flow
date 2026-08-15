@@ -7,6 +7,12 @@ import { Types } from 'mongoose';
 import { activeSessionStorage } from '../services/session.service.ts';
 import { randomUUID } from 'node:crypto';
 
+const secretKey = process.env.SECRET_KEY;
+
+if (!secretKey) {
+    throw new Error("SECRET_KEY is missing");
+}
+
 const generateToken = ( userId : Types.ObjectId , email : String, role : String ) => { // no async needed, don't use async with the generate Token
 
     const token = jwt.sign(
@@ -17,7 +23,7 @@ const generateToken = ( userId : Types.ObjectId , email : String, role : String 
 
         }, 
 
-        "secretKey", 
+        secretKey, 
         {
             expiresIn: '1h' 
     });
