@@ -1,0 +1,12 @@
+
+scrape_configs: # it means here is the list of places Prometheus shuld collect metrics from
+  - job_name: "promethius"  
+    static_configs: 
+      - targets: ["localhost:9090"]
+
+  - job_name: "pushgateway"  # we are creating a new job scrap called promethius
+    honor_labels: true
+    static_configs: # It means i am going to manually give Prometheus the address to scrape. We are not doing automatic service recovery
+      - targets: ["localhost:9091"] 
+
+# Prometheus uses scrape configuration to periodically collect metrics from the configured
