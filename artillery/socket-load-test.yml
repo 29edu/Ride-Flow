@@ -1,0 +1,13 @@
+config:
+  target: "http://localhost:5009" # Tells on which server virtual users should connect 
+
+  phases: # - means start a new line 
+    - duration: 10 # It means for 10 sec create VU. 
+      arrivalRate: 5 # Every sec create x VU
+
+scenarios:
+  - name : "Socket connection capacity test"
+    engine: socketio
+  
+    flow:
+      - think: 30
