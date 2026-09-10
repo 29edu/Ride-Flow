@@ -123,8 +123,9 @@ const liveSessionStorage = async ( req : Request, res : Response) => {
                 { key : String(driverId),
                   value : JSON.stringify({
                     driverId,
-                    type: "DriverOnline",
-                    message: "Driver is now online",
+                    type: "DriverAvailability",
+                    available: available,
+                    message: `Driver is ${available}`,
                   })
                 }
             ]
