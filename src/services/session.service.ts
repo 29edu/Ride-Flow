@@ -3,21 +3,24 @@ import {type Request, type Response} from 'express'
 import { client } from '../config/redis.ts';
 import { v4 as uuidv4} from 'uuid'
 import { Driver } from '../model/driver.model.ts';
+import {h3} from 'h3-js'
+import producer from '../../shared/kafka/producer.ts';
 
-const activeSessionStorage = async (req : Request, res : Response) => {
+// Active session and Live Session
+// Active Session is used just like login, where it says for a period of time -> The driver is authenticated.
+// Live session is for the driver that can become avaible or not available according to her choice easily. 
+
+// const activeSessionStorage = async (req : Request, res : Response) => {
+
+const activeSessionStorage = async (email : string, deviceId : string, status : string) : Promise<string> => {
 
     try {
-        const {driverId, deviceId, status} = req.body;
-        const activeSessionKey = uuidv4()
 
-        const driver = await Driver.findOne({driverId})
+        const driver = await Driver.findOne({ email})
+
 
         if(!driver) {
-
-            return res.status(400).json({
-                success : false,
-                message : "Invalid Driver"
-            })
+            throw new Error ("Driver not found")
         }
 
         let canPublishLocation = true
@@ -25,29 +28,48 @@ const activeSessionStorage = async (req : Request, res : Response) => {
             canPublishLocation = false
         }
 
-        await client.hSet(`activeSessionId:${activeSessionKey}`, {
+        const createdAt = Date.now()
+        const expiresAt = Date.now() + 60 * 60 * 24 * 1000;
+
+        const activeSessionId = uuidv4()
+        const activeSessionKey = `activeSessionId:${activeSessionId}`;
+        
+        await client.hSet(activeSessionKey, {
             'sessionId' : activeSessionKey,
-            'driverId' : driverId,
+            'driverId' : driver.driverId,
             'deviceId' : deviceId,
             'status' : status,
-            'createdAt' : Date.now(),
-            'expiresAt' : Date.now() + 60 * 60 * 24 * 1000,
+            'createdAt' : createdAt.toString(),
+            'expiresAt' : expiresAt.toString(),
             'canPublishLocation' : canPublishLocation.toString()
         })
 
-        return res.status(201).json({
-            success : true,
-            sessionId : activeSessionKey
-        })
+        // Setting up TTL in the Redis for Auto Expiration of the Session Key
+
+        await client.expire(activeSessionKey, 24 * 60 * 60) // Redis store the time in seconds
+
+        return activeSessionKey;
         
     } catch (error : unknown) {
 
+        if(error instanceof Error) {
+            console.error("Error in the Active Session Service", error.message)
+        } else {
+            console.error("Error in the Active Session Service", error)
+        }
+
+        throw error;
     }
+}
+
+interface Message {
+    driverId : string,
+
 }
 
 const liveSessionStorage = async ( req : Request, res : Response) => {
 
-    const {driverId, available, currentSessionId, latitude, longitude, h3cell, lastLocationUpdate} = req.body;
+    const {driverId, available, currentSessionId, latitude, longitude, lastLocationUpdate} = req.body;
 
     try {
         const driver = await Driver.findOne({driverId});
@@ -59,7 +81,12 @@ const liveSessionStorage = async ( req : Request, res : Response) => {
             })
         }
 
-        const driverSession = await client.hGetAll(`activeSessionId:${currentSessionId}`);  
+        const  resolution = 8;
+        const h3cell = h3.latLngToCell(latitude, longitude, resolution);
+        await client.sAdd(`driverIds:${h3cell}`, driverId)
+
+        const driverSession = await client.hGetAll(`activeSessionId:${currentSessionId}`);  // So if the driver doesn't have any active session, Live 
+        // session cannot be created. 
 
         if(Object.keys(driverSession).length === 0) {
             
@@ -76,11 +103,11 @@ const liveSessionStorage = async ( req : Request, res : Response) => {
             })
         }
 
-        const liveSessionKey = `driverId:${driverId}`
+        const liveSessionKey = `liveSessionDriverId:${driverId}`
 
         await client.hSet(liveSessionKey, {
             'online' : "1",
-            "available" : available,
+            "available" : available, // during online the driver can still be unavailable , maybe he is already booked by someone
             "currentSessionId" : currentSessionId,
             "latitude" : latitude,
             "longitude" : longitude,
@@ -88,12 +115,27 @@ const liveSessionStorage = async ( req : Request, res : Response) => {
             "lastLocationUpdate" : lastLocationUpdate
         })
 
+        // Sending message to the kafka cluster
+
+        await producer.send({
+            topic: 'Driver-status',
+            messages: [
+                { key : String(driverId),
+                  value : JSON.stringify({
+                    driverId,
+                    type: "DriverOnline",
+                    message: "Driver is now online",
+                  })
+                }
+            ]
+        })
+
     } catch (error : unknown) {
         
         if(error instanceof Error) {
-            console.log("Live Session Storage Error in Redis", error.message)
+            console.error("Live Session Storage Error in Redis", error.message)
         } else {
-            console.log("Live Session Storage Error in Redis", error)
+            console.error("Live Session Storage Error in Redis", error)
         }
 
         return res.json({
