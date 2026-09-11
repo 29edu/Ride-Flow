@@ -62,10 +62,6 @@ const activeSessionStorage = async (email : string, deviceId : string, status : 
     }
 }
 
-interface Message {
-    driverId : string,
-
-}
 
 const liveSessionStorage = async ( req : Request, res : Response) => {
 
@@ -109,14 +105,9 @@ const liveSessionStorage = async ( req : Request, res : Response) => {
             'online' : "1",
             "available" : available, // during online the driver can still be unavailable , maybe he is already booked by someone
             "currentSessionId" : currentSessionId,
-            "latitude" : latitude,
-            "longitude" : longitude,
-            "h3cell" : h3cell,
-            "lastLocationUpdate" : lastLocationUpdate
         })
 
         // Sending message to the kafka cluster
-
         await producer.send({
             topic: 'Driver-status',
             messages: [
